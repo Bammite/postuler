@@ -11,7 +11,7 @@ class JobService {
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     this.modelCandidates = [
       process.env.GEMINI_MODEL,
-      "gemma-4-26b-a4b-it"
+      "gemma-3-27b-it"
     ].filter(Boolean);
   }
 
