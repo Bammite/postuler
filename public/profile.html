@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Profil - IA Job Assistant</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        textarea { width: 100%; height: 200px; margin: 10px 0; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+        button { background-color: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 16px; margin-right: 10px; }
+        nav { background: #333; padding: 1rem; margin: -20px -20px 20px -20px; border-radius: 0 0 8px 8px; }
+        nav a { color: white; text-decoration: none; margin-right: 20px; font-weight: bold; }
+        .btn-save { background-color: #ffc107; color: black; }
+        #status { margin-top: 20px; padding: 15px; border-radius: 5px; display: none; }
+    </style>
+</head>
+<body>
+    <nav><a href="index.html">🏠 Accueil</a></nav>
+    <h1>👤 Gestion du Profil</h1>
+    <form id="profileForm">
+        <label>Ma description professionnelle :</label>
+        <textarea id="profileDescription" placeholder="Décrivez votre parcours..."></textarea>
+        <label>Mon CV (PDF) :</label>
+        <input type="file" id="cvFile" accept=".pdf">
+        <p id="currentCvStatus"></p>
+        <button type="submit" id="saveBtn" class="btn-save">Enregistrer</button>
+    </form>
+    <div id="status"></div>
+    <script>
+        async function load() {
+            const res = await fetch('/get-profile');
+            const data = await res.json();
+            if (data.profile) {
+                document.getElementById('profileDescription').value = data.profile.description;
+                document.getElementById('currentCvStatus').innerText = data.profile.cvPath ? "✅ CV présent" : "❌ Aucun CV";
+            }
+        }
+        document.getElementById('profileForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const fd = new FormData();
+            fd.append('description', document.getElementById('profileDescription').value);
+            if (document.getElementById('cvFile').files[0]) fd.append('cv', document.getElementById('cvFile').files[0]);
+            const res = await fetch('/save-profile', { method: 'POST', body: fd });
+            const data = await res.json();
+            alert(data.message);
+            load();
+        };
+        load();
+    </script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Postuler - IA Job Assistant</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        textarea { width: 100%; height: 200px; margin: 10px 0; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+        button { background-color: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 16px; margin-right: 10px; }
+        nav { background: #333; padding: 1rem; margin: -20px -20px 20px -20px; border-radius: 0 0 8px 8px; }
+        nav a { color: white; text-decoration: none; margin-right: 20px; font-weight: bold; }
+        nav a:hover { color: #ffc107; }
+        .btn-send { background-color: #28a745; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        #status { margin-top: 20px; padding: 15px; border-radius: 5px; display: none; }
+        #preview { margin-top: 20px; border: 1px solid #ddd; padding: 20px; border-radius: 8px; display: none; background: #f9f9f9; }
+        .preview-field { margin-bottom: 10px; }
+        .preview-field label { font-weight: bold; display: block; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">⚙️ Mon Profil</a>
+        <a href="apply.html">📝 Postuler</a>
+    </nav>
+
+    <h1>📝 Nouvelle Candidature</h1>
+    <p>Collez l'offre d'emploi. L'IA utilisera votre profil enregistré s'il n'y a pas de description spécifique ici.</p>
+
+    <form id="jobForm">
+        <label for="jobDescription">Annonce de l'offre :</label>
+        <textarea id="jobDescription" placeholder="Copiez-collez l'offre ici..." required></textarea>
+        
+        <label for="userProfile">Mon profil pour cette candidature (optionnel) :</label>
+        <textarea id="userProfile" placeholder="Laissez vide pour utiliser le profil enregistré..."></textarea>
+
+        <div style="margin: 15px 0;">
+            <input type="checkbox" id="attachCv">
+            <label for="attachCv">Joindre mon CV PDF enregistré</label>
+        </div>
+        
+        <button type="submit" id="generateBtn">1. Générer le mail avec l'IA</button>
+    </form>
+
+    <div id="preview">
+        <h3>📧 Prévisualisation du mail</h3>
+        <div class="preview-field">
+            <label for="targetEmail">Destinataire :</label>
+            <input type="text" id="targetEmail" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+        <div class="preview-field">
+            <label for="targetSubject">Objet :</label>
+            <input type="text" id="targetSubject" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+        <div class="preview-field">
+            <label for="targetBody">Message :</label>
+            <textarea id="targetBody" style="height: 300px;"></textarea>
+        </div>
+        <button id="sendBtn" class="btn-send">2. Confirmer et envoyer le mail</button>
+    </div>
+
+    <div id="status"></div>
+
+    <script>
+        const form = document.getElementById('jobForm');
+        const preview = document.getElementById('preview');
+        const status = document.getElementById('status');
+        const generateBtn = document.getElementById('generateBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const attachCvCheckbox = document.getElementById('attachCv');
+
+        // Vérifier si un profil existe pour activer l'option CV
+        async function checkProfile() {
+            const res = await fetch('/get-profile');
+            const data = await res.json();
+            if (!data.success || !data.profile.cvPath) {
+                attachCvCheckbox.disabled = true;
+                attachCvCheckbox.title = "Veuillez d'abord uploader un CV dans l'onglet Profil";
+            }
+        }
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            generateBtn.disabled = true;
+            preview.style.display = 'none';
+            status.style.display = 'block';
+            status.style.backgroundColor = '#e2e3e5';
+            status.innerText = "L'IA analyse l'offre et rédige votre candidature...";
+
+            const res = await fetch('/generate-draft', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jobDescription: document.getElementById('jobDescription').value,
+                    userProfile: document.getElementById('userProfile').value
+                })
+            });
+
+            const data = await res.json();
+            generateBtn.disabled = false;
+
+            if (data.success) {
+                status.style.display = 'none';
+                preview.style.display = 'block';
+                document.getElementById('targetEmail').value = data.draft.email;
+                document.getElementById('targetSubject').value = data.draft.subject;
+                document.getElementById('targetBody').value = data.draft.body;
+            } else {
+                status.style.backgroundColor = '#f8d7da';
+                status.innerText = "Erreur : " + data.message;
+            }
+        };
+
+        sendBtn.onclick = async () => {
+            sendBtn.disabled = true;
+            status.style.display = 'block';
+            status.style.innerText = "Envoi en cours...";
+
+            const res = await fetch('/send-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: document.getElementById('targetEmail').value,
+                    subject: document.getElementById('targetSubject').value,
+                    body: document.getElementById('targetBody').value,
+                    attachCv: attachCvCheckbox.checked
+                })
+            });
+
+            const data = await res.json();
+            status.style.backgroundColor = data.success ? '#d4edda' : '#f8d7da';
+            status.innerText = data.message;
+            sendBtn.disabled = false;
+        };
+
+        checkProfile();
+    </script>
+</body>
+</html>

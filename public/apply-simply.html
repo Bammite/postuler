@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Postuler Simplement - IA</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        textarea { width: 100%; height: 300px; margin: 10px 0; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+        button { background-color: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        nav { background: #333; padding: 1rem; margin: -20px -20px 20px -20px; border-radius: 0 0 8px 8px; }
+        nav a { color: white; text-decoration: none; margin-right: 20px; font-weight: bold; }
+        #preview { display:none; margin-top:20px; background:#f9f9f9; padding:20px; border:1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <nav><a href="index.html">🏠 Accueil</a></nav>
+    <h1>⚡ Postuler Simplement</h1>
+    <p>Collez l'offre d'emploi ci-dessous. L'IA rédigera le mail en utilisant votre profil enregistré.</p>
+    <textarea id="jobDesc" placeholder="Collez l'offre ici..."></textarea>
+    <button onclick="generate()">Générer la candidature</button>
+
+    <div id="preview">
+        <h3>Brouillon généré</h3>
+        <p><strong>À :</strong> <span id="pEmail"></span></p>
+        <p><strong>Objet :</strong> <span id="pSub"></span></p>
+        <textarea id="pBody" style="height:200px"></textarea>
+        <button onclick="send()" style="background:#007bff">Confirmer et Envoyer avec CV</button>
+    </div>
+
+    <script>
+        async function generate() {
+            const res = await fetch('/generate-draft', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ jobDescription: document.getElementById('jobDesc').value, userProfile: "" })
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('preview').style.display = 'block';
+                document.getElementById('pEmail').innerText = data.draft.email;
+                document.getElementById('pSub').innerText = data.draft.subject;
+                document.getElementById('pBody').value = data.draft.body;
+            } else { alert(data.message); }
+        }
+        async function send() {
+            const res = await fetch('/send-email', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    email: document.getElementById('pEmail').innerText,
+                    subject: document.getElementById('pSub').innerText,
+                    body: document.getElementById('pBody').value,
+                    attachCv: true
+                })
+            });
+            const data = await res.json();
+            alert(data.message);
+        }
+    </script>
+</body>
+</html>
